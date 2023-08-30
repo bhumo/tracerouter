@@ -1,8 +1,18 @@
 from subprocess import run
 import json
+import numpy
 class Hop:
     ip_address = []
     ttl = []
+
+class HopLatency:
+    hop_number = -1
+    average = -1
+    median = -1
+    maximum = -1
+    minimum = -1
+
+Hops_LATENCY_DATA = []
 
 def extractHopsFromFile(filename):
     file = open(filename,'r')
@@ -61,12 +71,18 @@ def create_json_from_hops_map(hop_map):
   'min': 3.108}]
     """
     json_output = []
+    average_per_hop = []
+    median_per_hop = []
+    
     for hop in hop_map:
-        avg = 0.0
-        hosts = hop_map[hop].ip_address
-        maxi = max(hop_map[hop].ttl)       
-        med = 0.0
-        mini = min(hop_map[hop].ttl)
+        hop_obj = hop_map[hop]
+        ttl_np_array = numpy.array(hop_obj.ttl)
+        numpy.set_printoptions(precision=3)
+        avg = numpy.average(ttl_np_array)
+        hosts = hop_obj.ip_address
+        maxi = max(hop_obj.ttl)       
+        med = numpy.median(ttl_np_array)
+        mini = min(hop_obj.ttl)
         out = {
             "avg" : avg,
             "hop" : hop,
@@ -95,7 +111,7 @@ def create_output_files(traceRoute_Output,N):
 
 host = 'www.google.com'
 max_hop = '35'
-no_of_runs = 10
+no_of_runs = 1
 traceRoute_Output = []
 for i in range(0,no_of_runs):
     traceRoute_Output.append(run(["traceroute", host, '-m', max_hop],capture_output=True).stdout)
