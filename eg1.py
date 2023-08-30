@@ -1,5 +1,5 @@
 from subprocess import run
-
+import json
 class Hop:
     ip_address = []
     ttl = []
@@ -36,11 +36,48 @@ def extractHopsFromFile(filename):
             # print(hop_object.ttl)
             # print("_______________________")
             hop_map[hop_number] = hop_object
-    for i in hop_map:
-        print(i)
-        print(hop_map[i].ip_address)
-        print(hop_map[i].ttl)
+    create_json_output_file(hop_map)
 
+def create_json_output_file(hop_map, filename ='data.json'):
+    file = open(filename,'w')
+    json_output = create_json_from_hops_map(hop_map)
+    json.dump(json_output,file, indent= 5)
+    file.close()
+
+def create_json_from_hops_map(hop_map):
+    """
+        json = [
+  {'avg': 0.645,
+  'hop': 1,
+  'hosts': [['172.17.0.1', '(172.17.0.1)']],
+  'max': 2.441,
+  'med': 0.556,
+  'min': 0.013},
+ {'avg': 6.386,
+  'hop': 2,
+  'hosts': [['testwifi.here', '(192.168.86.1)']],
+  'max': 16.085,
+  'med': 5.385,
+  'min': 3.108}]
+    """
+    json_output = []
+    for hop in hop_map:
+        avg = 0.0
+        hosts = hop_map[hop].ip_address
+        maxi = max(hop_map[hop].ttl)       
+        med = 0.0
+        mini = min(hop_map[hop].ttl)
+        out = {
+            "avg" : avg,
+            "hop" : hop,
+            "hosts": hosts,
+            "max" : maxi,
+            "med": med,
+            "min" : mini
+        }
+        json_output.append(out)
+    return json_output
+    
 
 
 def create_output_files(traceRoute_Output,N):
