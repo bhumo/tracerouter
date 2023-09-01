@@ -1,42 +1,47 @@
 from subprocess import run
 import json
 import numpy
-class Hop:
-    ip_address = []
-    ttl = []
+import matplotlib.pyplot as pyplt
 
-class HopLatency:
-    hop_number = -1
-    average = -1
-    median = -1
-    maximum = -1
-    minimum = -1
-
+ttl_np_array_list = []
+hop_map = {}
 Hops_LATENCY_DATA = []
+MAX_HOP = 30
+
+class Hop:
+    def __init__(self):        
+        self.ip_address = []
+        self.ttl = []
+
+
+
+
 
 def extractHopsFromFile(filename):
     file = open(filename,'r')
     next(file)
-    hop_map = {}
     for line in file:
         line = line.strip()
-        data = line.split(' ')
-        hop_number = data[0]
+        data = line.replace("  "," ").split(' ')
+        hop_number = int(data[0])
 
-        # print(data[0])
-        # print('@@@@@@@@@@@@@@@@@')
-        if data[2]!= '*' and data [4] != '*':
+        
+        if data[1]!= '*' and data [4] != '*':
             #extract the IPs
-            hop_object =  Hop()
+            print(hop_number)
+            hop_object = Hop()
+            if hop_map.get(hop_number):
+                hop_object = hop_map[hop_number]
+
+            hop_object.ip_address.append(data[1])
             hop_object.ip_address.append(data[2])
-            hop_object.ip_address.append(data[3])
 
             #three packets time     
             length = len(data)   
 
-            for i in range(5,length):
+            for i in range(3,length):
                 try:
-                    time = float(data[5])
+                    time = float(data[i])
                     hop_object.ttl.append(time)
 
                 except:
@@ -46,13 +51,47 @@ def extractHopsFromFile(filename):
             # print(hop_object.ttl)
             # print("_______________________")
             hop_map[hop_number] = hop_object
-    create_json_output_file(hop_map)
+            print(hop_number)
+        else:
+            if data[3] != '*' :
+                #this is the case where we have reached the last hop that is my destination
+                #now i have to add it
+                hop_object = Hop()
+                if hop_map.get(hop_number):
+                    hop_object = hop_map[hop_number]
+                
+                line = line.replace("*"," ")
+                new_data = line.split(' ')
+                hop_number = new_data[0]
+                hop_object.ip_address.append(new_data[1])
+                hop_object.ip_address.append(new_data[2])
+
+                #now add the time for the packets
+                length = len(new_data)
+                for i in range(3,length):
+                    time = new_data[i]
+                    try:
+                        time = float(data[i])
+                        hop_object.ttl.append(time)
+                    except:
+                        pass
+                hop_map[hop_number] = hop_object
+
+                
+
+                
+
+def print_hop_obj():
+    for hop in hop_map:
+        print("num: ",hop)
+        print(hop_map[hop].ttl)
 
 def create_json_output_file(hop_map, filename ='data.json'):
     file = open(filename,'w')
     json_output = create_json_from_hops_map(hop_map)
     json.dump(json_output,file, indent= 5)
     file.close()
+
 
 def create_json_from_hops_map(hop_map):
     """
@@ -71,12 +110,12 @@ def create_json_from_hops_map(hop_map):
   'min': 3.108}]
     """
     json_output = []
-    average_per_hop = []
-    median_per_hop = []
-    
+
     for hop in hop_map:
+        
         hop_obj = hop_map[hop]
         ttl_np_array = numpy.array(hop_obj.ttl)
+        ttl_np_array_list.append(hop_obj.ttl)
         numpy.set_printoptions(precision=3)
         avg = numpy.average(ttl_np_array)
         hosts = hop_obj.ip_address
@@ -92,8 +131,12 @@ def create_json_from_hops_map(hop_map):
             "min" : mini
         }
         json_output.append(out)
+
     return json_output
     
+def show_box_plot():
+    pyplt.boxplot(ttl_np_array_list)
+    pyplt.show()
 
 
 def create_output_files(traceRoute_Output,N):
@@ -108,15 +151,25 @@ def create_output_files(traceRoute_Output,N):
         
         extractHopsFromFile(file_name)
 
+def get_file_names(N):
+    for i in range(0,N):
+        file_name = 'tr_run-'+ str(i+1) + '.out'
+        extractHopsFromFile(file_name)
 
 host = 'www.google.com'
 max_hop = '35'
-no_of_runs = 1
+no_of_runs = 5
 traceRoute_Output = []
-for i in range(0,no_of_runs):
-    traceRoute_Output.append(run(["traceroute", host, '-m', max_hop],capture_output=True).stdout)
+# for i in range(0,no_of_runs):
+#     traceRoute_Output.append(run(["traceroute", host, '-m', max_hop],capture_output=True).stdout)
+# print("TraceRoute is done running")
+# create_output_files(traceRoute_Output,no_of_runs)
+get_file_names(no_of_runs)
+create_json_output_file(hop_map)
 
-create_output_files(traceRoute_Output,no_of_runs)
+show_box_plot()
+
+
 
 
 
