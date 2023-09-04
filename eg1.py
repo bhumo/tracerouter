@@ -66,7 +66,7 @@ def extractHopsFromFile(filename):
             # print(hop_object.ttl)
             # print("_______________________")
             hop_map[hop_number] = hop_object
-            print(hop_number)
+            
         else:
             if data[3] != '*' :
                 #this is the case where we have reached the last hop that is my destination
@@ -92,14 +92,6 @@ def extractHopsFromFile(filename):
                         pass
                 hop_map[hop_number] = hop_object
 
-                
-
-                
-
-def print_hop_obj():
-    for hop in hop_map:
-        print("num: ",hop)
-        print(hop_map[hop].ttl)
 
 def create_json_output_file(hop_map, filename ='data.json'):
     file = open(filename,'w')
@@ -179,7 +171,6 @@ def get_file_names(N):
 def run_traceroute():
      for i in range(0,no_of_runs):
          traceRoute_Output.append(run(["traceroute", host, '-m', max_hop],capture_output=True).stdout)
-     print("TraceRoute is done running")
 
 host = 'www.google.com'
 max_hop = '35'
