@@ -3,10 +3,25 @@ import json
 import numpy
 import matplotlib.pyplot as pyplt
 
+
+# Pending functionalities
+# 1. Instead of creating files for computing the data use some other way to solve it
+# 2. Add the input functionalities to take argument
+# 3. Add the pdf generation functionality
+# 4. Add the TEST_DIR and path and etc functionalities
+
+
+
 ttl_np_array_list = []
 hop_map = {}
-Hops_LATENCY_DATA = []
 MAX_HOP = 30
+TARGET = "www.google.com"
+NUM_RUNS = 1
+RUN_DELAY = 0
+OUTPUT = ""
+PDF_GRAPH_PATH = ""
+PDF_GRAPH_NAME = "stats"
+TEST_DIR = ""
 
 class Hop:
     def __init__(self):        
@@ -28,7 +43,7 @@ def extractHopsFromFile(filename):
         
         if data[1]!= '*' and data [4] != '*':
             #extract the IPs
-            print(hop_number)
+
             hop_object = Hop()
             if hop_map.get(hop_number):
                 hop_object = hop_map[hop_number]
@@ -133,11 +148,15 @@ def create_json_from_hops_map(hop_map):
         json_output.append(out)
 
     return json_output
-    
-def show_box_plot():
+
+def create_box_plot():
     pyplt.boxplot(ttl_np_array_list)
+
+def show_box_plot():
     pyplt.show()
 
+def save_box_plot():
+    pyplt.savefig(PDF_GRAPH_PATH+PDF_GRAPH_NAME+'.pdf')
 
 def create_output_files(traceRoute_Output,N):
 
@@ -156,6 +175,12 @@ def get_file_names(N):
         file_name = 'tr_run-'+ str(i+1) + '.out'
         extractHopsFromFile(file_name)
 
+
+def run_traceroute():
+     for i in range(0,no_of_runs):
+         traceRoute_Output.append(run(["traceroute", host, '-m', max_hop],capture_output=True).stdout)
+     print("TraceRoute is done running")
+
 host = 'www.google.com'
 max_hop = '35'
 no_of_runs = 5
@@ -166,8 +191,11 @@ traceRoute_Output = []
 # create_output_files(traceRoute_Output,no_of_runs)
 get_file_names(no_of_runs)
 create_json_output_file(hop_map)
-
+create_box_plot()
+save_box_plot()
 show_box_plot()
+
+
 
 
 
