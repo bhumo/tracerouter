@@ -5,6 +5,7 @@ import matplotlib.pyplot as pyplt
 import sys
 import os
 import time
+import re
 
 
 # Pending functionalities
@@ -28,7 +29,7 @@ TEST_DIR = ""
 
 class Hop:
     def __init__(self):        
-        self.ip_address = []
+        self.ip_address = set()
         self.ttl = []
 
 
@@ -50,9 +51,10 @@ def extractHopsFromFile(filename):
             hop_object = Hop()
             if hop_map.get(hop_number):
                 hop_object = hop_map[hop_number]
-
-            hop_object.ip_address.append(data[1])
-            hop_object.ip_address.append(data[2])
+            ip_add_tuple = (data[1], data[2])
+            hop_object.ip_address.add(ip_add_tuple)
+            # hop_object.ip_address.append(data[1])
+            # hop_object.ip_address.append(data[2])
 
             #three packets time     
             length = len(data)   
@@ -79,11 +81,14 @@ def extractHopsFromFile(filename):
                     hop_object = hop_map[hop_number]
                 
                 line = line.replace("*"," ")
+                
                 new_data = line.split(' ')
                 hop_number = int(new_data[0])
-                hop_object.ip_address.append(new_data[1])
-                hop_object.ip_address.append(new_data[2])
-
+                ip_add_tuple = (new_data[1], new_data[2])
+                hop_object.ip_address.add(ip_add_tuple)
+                # hop_object.ip_address.append(new_data[1])
+                # hop_object.ip_address.append(new_data[2])
+                
                 #now add the time for the packets
                 length = len(new_data)
                 for i in range(3,length):
@@ -129,7 +134,7 @@ def create_json_from_hops_map(hop_map):
         ttl_np_array_list.append(hop_obj.ttl)
         numpy.set_printoptions(precision=3)
         avg = numpy.average(ttl_np_array)
-        hosts = hop_obj.ip_address
+        hosts = list(hop_obj.ip_address)
         maxi = max(hop_obj.ttl)       
         med = numpy.median(ttl_np_array)
         mini = min(hop_obj.ttl)
@@ -146,7 +151,12 @@ def create_json_from_hops_map(hop_map):
     return json_output
 
 def create_box_plot():
-    pyplt.boxplot(ttl_np_array_list, showmeans= True)
+    mean_style ={
+        'marker':'o',
+        'markerfacecolor': 'black'
+    }
+      
+    pyplt.boxplot(ttl_np_array_list, showmeans= True, meanprops=mean_style)
 
 def show_box_plot():
     pyplt.show()
@@ -209,17 +219,18 @@ def extractHopsFromList(traceRoute_Output):
             hop_object = Hop()
             if hop_map.get(hop_number):
                 hop_object = hop_map[hop_number]
-
-            hop_object.ip_address.append(data[1])
-            hop_object.ip_address.append(data[2])
+            ip_add_tuple = (data[1], data[2])
+            hop_object.ip_address.add(ip_add_tuple)
+            # hop_object.ip_address.append(data[1])
+            # hop_object.ip_address.append(data[2])
 
             #three packets time     
             data_length = len(data)   
 
             for i in range(3,data_length):
                 try:
-                    time = float(data[i])
-                    hop_object.ttl.append(time)
+                    time_ttl = float(data[i])
+                    hop_object.ttl.append(time_ttl)
 
                 except:
                     pass
@@ -237,19 +248,25 @@ def extractHopsFromList(traceRoute_Output):
                 if hop_map.get(hop_number):
                     hop_object = hop_map[hop_number]
                 
-                line = line.replace("*"," ")
+                line = line.replace("*","")
+                                
+                line = line.strip()
                 new_data = line.split(' ')
+                # print(new_data)
+                # time.sleep(int(10))
                 hop_number = int(new_data[0])
-                hop_object.ip_address.append(new_data[1])
-                hop_object.ip_address.append(new_data[2])
+                ip_add_tuple = (new_data[1], new_data[2])
+                hop_object.ip_address.add(ip_add_tuple)
+                # hop_object.ip_address.append(new_data[1])
+                # hop_object.ip_address.append(new_data[2])
 
                 #now add the time for the packets
                 length = len(new_data)
                 for i in range(3,length):
-                    time = new_data[i]
+                    time_ttl = new_data[i]
                     try:
-                        time = float(data[i])
-                        hop_object.ttl.append(time)
+                        time_ttl = float(data[i])
+                        hop_object.ttl.append(time_ttl)
                     except:
                         pass
                 hop_map[hop_number] = hop_object
@@ -347,7 +364,7 @@ run_traceroute()
 create_json_output_file(hop_map)
 create_box_plot()
 save_box_plot()
-show_box_plot()
+# show_box_plot()
 
 
 
