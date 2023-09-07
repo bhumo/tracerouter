@@ -4,6 +4,7 @@ import numpy
 import matplotlib.pyplot as pyplt
 import sys
 import os
+import time
 
 
 # Pending functionalities
@@ -16,13 +17,13 @@ import os
 
 ttl_np_array_list = []
 hop_map = {}
-MAX_HOP = 30
+MAX_HOP = "30"
 TARGET = "www.google.com"
-NUM_RUNS = 1
+NUM_RUNS = 10
 RUN_DELAY = 0
-OUTPUT = ""
-PDF_GRAPH_PATH = ""
-PDF_GRAPH_NAME = "stats"
+JSON_OUTPUT_PATH_AND_NAME = "data.json"
+PDF_GRAPH_PATH_NAME = "stats"
+
 TEST_DIR = ""
 
 class Hop:
@@ -79,7 +80,7 @@ def extractHopsFromFile(filename):
                 
                 line = line.replace("*"," ")
                 new_data = line.split(' ')
-                hop_number = new_data[0]
+                hop_number = int(new_data[0])
                 hop_object.ip_address.append(new_data[1])
                 hop_object.ip_address.append(new_data[2])
 
@@ -95,8 +96,8 @@ def extractHopsFromFile(filename):
                 hop_map[hop_number] = hop_object
 
 
-def create_json_output_file(hop_map, filename ='data.json'):
-    file = open(filename,'w')
+def create_json_output_file(hop_map):
+    file = open(JSON_OUTPUT_PATH_AND_NAME,'w')
     json_output = create_json_from_hops_map(hop_map)
     json.dump(json_output,file, indent= 5)
     file.close()
@@ -119,10 +120,11 @@ def create_json_from_hops_map(hop_map):
   'min': 3.108}]
     """
     json_output = []
-
-    for hop in hop_map:
+    sorted_keys = sorted(hop_map.keys())
+    for hop in sorted_keys:
         
         hop_obj = hop_map[hop]
+
         ttl_np_array = numpy.array(hop_obj.ttl)
         ttl_np_array_list.append(hop_obj.ttl)
         numpy.set_printoptions(precision=3)
@@ -150,7 +152,7 @@ def show_box_plot():
     pyplt.show()
 
 def save_box_plot():
-    pyplt.savefig(PDF_GRAPH_PATH+PDF_GRAPH_NAME+'.pdf')
+    pyplt.savefig(PDF_GRAPH_PATH_NAME+'.pdf')
 
 # def create_output_files(traceRoute_Output,N):
 
@@ -173,9 +175,10 @@ def get_file_names(N):
 def run_traceroute():
      traceRoute_Output = []
      for i in range(0,NUM_RUNS):
-         opt = run(["traceroute", host, '-m', max_hop],capture_output=True).stdout
-        #  print(opt)
+         opt = run(["traceroute", TARGET, '-m', MAX_HOP],capture_output=True).stdout
          extractHopsFromList((get_string_list_from_byte_arr(opt)))
+         time.sleep(RUN_DELAY)
+         
     #traceroute output will contain byte array
     #decode the byte array into str list
      #extractHopsFromList(traceRoute_Output)
@@ -236,7 +239,7 @@ def extractHopsFromList(traceRoute_Output):
                 
                 line = line.replace("*"," ")
                 new_data = line.split(' ')
-                hop_number = new_data[0]
+                hop_number = int(new_data[0])
                 hop_object.ip_address.append(new_data[1])
                 hop_object.ip_address.append(new_data[2])
 
@@ -254,55 +257,93 @@ def extractHopsFromList(traceRoute_Output):
 def print_help_message():
     print("usage: trstats.py [-h] [-n NUM_RUNS] [-d RUN_DELAY] [-m MAX_HOPS] -o OUTPUT -g GRAPH [-t TARGET] [--test TEST_DIR]")
     print("Run traceroute multiple times towards a given target host optional arguments:")
-    print("-h, --help)")
+    print("-h, --help)",end = "    ")
     print("show this help message and exit")
-    print("-n NUM_RUNS")
+    print("-n NUM_RUNS",end = "    ")
     print("Number of times traceroute will run")
-    print("-d RUN_DELAY")
-    print("-m MAX_HOPS")
-    print("-o OUTPUT")
-    print("-g GRAPH")
-    print("-t TARGET")
-    print("--test TEST_DIR")
+    print("-d RUN_DELAY",end = "    ")
     print("Number of seconds to wait between two consecutive runs")
+    print("-m MAX_HOPS",end = "    ")
     print("Number of times traceroute will run")
+    print("-o OUTPUT",end = "    ")
     print("Path and name of output JSON file containing the stats")
+    print("-g GRAPH",end = "    ")
     print("Path and name of output PDF file containing stats graph")
-    print("A target domain name or IP address (required if --testis absent)")
+    print("-t TARGET",end = "    ")
+    print("--test TEST_DIR",end = "    ")
+    print("A target domain name or IP address (required if --testis absent)", end="  ") 
     print("Directory containing num_runs text files, each of which contains the output of a traceroute run. If present, this will override all other options and traceroute will not be invoked. Stats will be computed over the traceroute output stored in the text files")
-
-
+# 
+# 
 args = sys.argv
 length_of_args = len(args)
 if length_of_args == 1:
     print_help_message()
-    sys.exit()
-i=0
+    sys.exit(0)
+i=1
 while i<length_of_args:
     argument = args[i]
     
+    if(argument == "-h" or argument == "--help"):
+        print_help_message()
+        sys.exit(0)
+        
+    if(argument == "-t"):
+        #specify the target
+        TARGET = args[i+1]
+        i = i+1
+        continue
+
     if(argument == "--test"):
         #stop everything and read from the file only
         #assuming we will get the test dir
         # let's validate it
         i=i+1
         path = args[i]
-        dir_list = os.listdir(path) 
+        dir_list = os.listdir(path)
+ 
         for fileName in dir_list:
             extractHopsFromFile(path+"/"+fileName)
-
+            create_json_output_file(hop_map)
+            create_box_plot()
+            save_box_plot()
+            show_box_plot()
+        sys.exit(0)
+        
+    if(argument == "-n"):
+        # -n is the NUM_RUNS for the tracerouter
+        NUM_RUNS = int(args[i+1])
+        i=i+1
+        continue
+    
+    if (argument == "-d"):
+        # -d is the run delay i.e., how much time to wait for the next traceruote to start
+        RUN_DELAY = int(args[i+1])
+        i=i+1
+        continue
+        
+    if (argument == "-m"):
+        #-m is the max hop
+        MAX_HOP = args[i+1]
+        i=i+1
+        continue
+        
+    if(argument == "-o" or argument == "-O"):
+      # path of the json output file
+        JSON_OUTPUT_PATH_AND_NAME = args[i+1]
+        i=i+1
+        continue
+   
+    if(argument == "-g"):
+        # Path and name of output PDF file containing stats graph 
+        PDF_GRAPH_PATH_NAME = args[i+1]
+        i=i+1
+        continue
+        
+ 
     i= i+1
-host = 'www.google.com'
-max_hop = '35'
-# no_of_runs = 5
-traceRoute_Output = []
-# run_traceroute()
 
-# for i in range(0,no_of_runs):
-#     traceRoute_Output.append(run(["traceroute", host, '-m', max_hop],capture_output=True).stdout)
-# print("TraceRoute is done running")
-# create_output_files(traceRoute_Output,no_of_runs)
-# get_file_names(no_of_runs)
+run_traceroute()
 create_json_output_file(hop_map)
 create_box_plot()
 save_box_plot()
