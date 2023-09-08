@@ -22,7 +22,7 @@ MAX_HOP = "30"
 TARGET = "www.google.com"
 NUM_RUNS = 10
 RUN_DELAY = 0
-JSON_OUTPUT_PATH_AND_NAME = "data.json"
+JSON_OUTPUT_PATH_AND_NAME = "data"
 PDF_GRAPH_PATH_NAME = "stats"
 
 TEST_DIR = ""
@@ -41,7 +41,8 @@ def extractHopsFromFile(filename):
     next(file)
     for line in file:
         line = line.strip()
-        data = line.replace("  "," ").split(' ')
+        line = re.sub(" +"," ",line)
+        data = line.split(' ')
         hop_number = int(data[0])
 
         
@@ -81,7 +82,7 @@ def extractHopsFromFile(filename):
                     hop_object = hop_map[hop_number]
                 
                 line = line.replace("*"," ")
-                
+                line = re.sub(" +"," ",line)
                 new_data = line.split(' ')
                 hop_number = int(new_data[0])
                 ip_add_tuple = (new_data[1], new_data[2])
@@ -89,12 +90,12 @@ def extractHopsFromFile(filename):
                 # hop_object.ip_address.append(new_data[1])
                 # hop_object.ip_address.append(new_data[2])
                 
-                #now add the time for the packets
+                # now add the time for the packets
                 length = len(new_data)
                 for i in range(3,length):
                     time = new_data[i]
                     try:
-                        time = float(data[i])
+                        time = float(new_data[i])
                         hop_object.ttl.append(time)
                     except:
                         pass
@@ -102,7 +103,7 @@ def extractHopsFromFile(filename):
 
 
 def create_json_output_file(hop_map):
-    file = open(JSON_OUTPUT_PATH_AND_NAME,'w')
+    file = open(JSON_OUTPUT_PATH_AND_NAME+".json",'w')
     json_output = create_json_from_hops_map(hop_map)
     json.dump(json_output,file, indent= 5)
     file.close()
@@ -135,6 +136,12 @@ def create_json_from_hops_map(hop_map):
         numpy.set_printoptions(precision=3)
         avg = numpy.average(ttl_np_array)
         hosts = list(hop_obj.ip_address)
+        if len(hop_obj.ttl) == 0:
+            print("(((((((((((((((((((((((())))))))))))))))))))))))")
+            print(hop)
+            print(hosts)
+            time.sleep(10)
+            continue
         maxi = max(hop_obj.ttl)       
         med = numpy.median(ttl_np_array)
         mini = min(hop_obj.ttl)
@@ -155,7 +162,7 @@ def create_box_plot():
         'marker':'o',
         'markerfacecolor': 'black'
     }
-      
+  
     pyplt.boxplot(ttl_np_array_list, showmeans= True, meanprops=mean_style)
 
 def show_box_plot():
@@ -195,7 +202,7 @@ def run_traceroute():
      
 
 def get_string_list_from_byte_arr(bytearray):
-    print(bytearray.decode('utf-8').replace("  "," ").split("\n"))
+    # print(bytearray.decode('utf-8').replace("  "," ").split("\n"))
     return bytearray.decode('utf-8').replace("  "," ").split('\n')
 
 def extractHopsFromList(traceRoute_Output):
@@ -205,6 +212,7 @@ def extractHopsFromList(traceRoute_Output):
         
         line = traceRoute_Output[i]
         line = line.strip()
+        line = re.sub(" +"," ", line)
         data = line.split(' ')
         
         try:
@@ -249,11 +257,15 @@ def extractHopsFromList(traceRoute_Output):
                     hop_object = hop_map[hop_number]
                 
                 line = line.replace("*","")
-                                
+                line = re.sub(" +"," ", line)                
                 line = line.strip()
                 new_data = line.split(' ')
-                # print(new_data)
-                # time.sleep(int(10))
+                
+                # if new_data[1]=="":
+                #     print("***********************")
+                #     print(new_data)
+                #     print(new_data[1])
+                # time.sleep(10)
                 hop_number = int(new_data[0])
                 ip_add_tuple = (new_data[1], new_data[2])
                 hop_object.ip_address.add(ip_add_tuple)
@@ -263,9 +275,9 @@ def extractHopsFromList(traceRoute_Output):
                 #now add the time for the packets
                 length = len(new_data)
                 for i in range(3,length):
-                    time_ttl = new_data[i]
+                
                     try:
-                        time_ttl = float(data[i])
+                        time_ttl = float(new_data[i])
                         hop_object.ttl.append(time_ttl)
                     except:
                         pass
@@ -305,27 +317,31 @@ while i<length_of_args:
         print_help_message()
         sys.exit(0)
         
-    if(argument == "-t"):
-        #specify the target
-        TARGET = args[i+1]
-        i = i+1
-        continue
 
     if(argument == "--test"):
         #stop everything and read from the file only
         #assuming we will get the test dir
         # let's validate it
+        
         i=i+1
         path = args[i]
         dir_list = os.listdir(path)
  
         for fileName in dir_list:
             extractHopsFromFile(path+"/"+fileName)
-            create_json_output_file(hop_map)
-            create_box_plot()
-            save_box_plot()
-            show_box_plot()
+        create_json_output_file(hop_map)
+        create_box_plot()
+        save_box_plot()
+
+            
         sys.exit(0)
+
+      
+    if(argument == "-t"):
+        #specify the target
+        TARGET = args[i+1]
+        i = i+1
+        continue
         
     if(argument == "-n"):
         # -n is the NUM_RUNS for the tracerouter
